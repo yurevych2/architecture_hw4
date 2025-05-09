@@ -55,7 +55,7 @@ This microservices-based system is designed to handle synchronous and asynchrono
 1. Reads raw value from `database_service` via `/read`.
 2. Sends it to Celery using `process_data_task.delay(data)`.
 3. Returns a `task_id` immediately.
-4. Celery worker picks up the task and transforms the value (e.g., uppercase).
+4. Celery worker picks up the task and transforms the value (uppercase).
 
 ---
 
