@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: microservices-pod
+spec:
+  containers:
+    - name: redis
+      image: docker.io/library/redis:latest
+      ports:
+        - containerPort: 6379
+    - name: db
+      image: microsvc
+      command:
+        - uvicorn
+        - --host
+        - "0.0.0.0"
+        - --port
+        - "8001"
+        - microservices.database_service.main:app
+      ports:
+        - containerPort: 8001
+          hostPort: 8001
+
+    - name: logic
+      image: microsvc
+      command:
+        - uvicorn
+        - --host
+        - "0.0.0.0"
+        - --port
+        - "8002"
+        - microservices.business_logic_service.main:app
+      ports:
+        - containerPort: 8002
+          hostPort: 8002
+
+    - name: client
+      image: localhost/microsvc
+      env:
+        - name: CLIENT_SECRET
+          value: "SECRET_TOKEN"
+      command:
+        - uvicorn
+        - --host
+        - "0.0.0.0"
+        - --port
+        - "8000"
+        - microservices.client_service.main:app
+      ports:
+        - containerPort: 8000
+          hostPort: 8000
+  
+    - name: scheduler
+      image: localhost/scheduler
+      env:
+        - name: FIRST_SERVICE_URL
+          value: "http://logic:8002"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+      command:
+        - uvicorn
+        - --host
+        - "0.0.0.0"
+        - --port
+        - "8003"
+        - main:app
+      ports:
+        - containerPort: 8003
+          hostPort: 8003
+    - name: worker1
+      image: localhost/microsvc
+      command:
+        - celery
+        - -A
+        - microservices.client_service.celery_app
+        - worker
+        - --loglevel=info
+        - --concurrency=2
+        - -n
+        - worker1@%h
+    - name: worker2
+      image: localhost/microsvc
+      command:
+        - celery
+        - -A
+        - microservices.client_service.celery_app
+        - worker
+        - --loglevel=info
+        - --concurrency=2
+        - -n
+        - worker2@%h
